@@ -8,7 +8,13 @@
 \begin{document}
 \maketitle
 
-\section{Measurements}
+\section{Introduction}
+This is the project report for problem set 2 of 6.829. It details our attempts at providing a
+protocol for congestion control that minimizes delay while maximizing throughput.
+For answers to the questions on the problem set, see section 2. For discussion of our early strategies,
+see section 3. For details regarding our final submission, see section 4.
+
+\section{Measurements for Questions 8, 9, and 10}
 Figure~\ref{fig:fixedWindow} shows the performance of a protocol with a fixed window size. 
 The best score we were able to achieve was -4.5 log(Throughput/Delay) with a window 
 size of 15. However, the measurements were not very stable and varied by as much 
@@ -58,10 +64,15 @@ decrease of 1.
  \label{tab:delayTriggered}
 \end{table}
 
-\section{Contest}
+
+%%%%%%%%%%% Early Strategies %%%%%%%%%%%%%%
+
+
+\section{Early Contest Strategies}
+
 One approach we tried was to change the window size based on changes in the delivery time, 
 i.e. the one-way trip time from the sender to the receiver. The assumption was that since we 
-are only messured on this direction, we shouldn't include delays in receiving ACKs in 
+are only measured on this direction, we shouldn't include delays in receiving ACKs in 
 the calculation. A first attempt was to compare the delivery time of the current acked
 packet to that of the previous packet. If the difference in delivery times was significant, 
 we adapt the window size. Specifically, if the current delivery time is less than half
@@ -91,12 +102,55 @@ following parameters:
 
 Another attempt we made was based on the assumption that delivery times of individual 
 packets may fluctuate, and we don't want to make changes based on inconsistent 
-fluctuations. We therefore messured the average delivery time of the last $k$ packets,
+fluctuations. We therefore measured the average delivery time of the last $k$ packets,
 and compared it with the average delivery time of the $k$ packets that preceded them. 
 The change in the window size was then made in a similar manner: if the current average
 delivery time was larger than the previous, we increment the window size; otherwise we 
 decrement it. With this scheme we achieved a very low delay (107 ms) but at the cost
 of a low throughput (1.16 Mbps), with a combined score of -4.52. 
 
+%%%%%%%%%%% Final Submission %%%%%%%%%%%%%%
+
+\section{Final Submission}
+
+The strategy in the final submission relied on measuring the rate at which acknowledgements
+were received, and setting the window size to be proportional to that rate. The exact formula
+used in the final submission was
+$$w \leftarrow r * rtt_{min} * 2 + 1$$
+where $r$ is the rate at which acknowledgements were received, measured over the last $150$
+milliseconds. On the Verizon $140$ second trace, this protocol had delay $182$ and throughput $4.71$,
+for a score of $-3.65$. On the full AT\&T trace, this protocol had delay $354$ and throughput $4.41$, for a
+score of $-4.39$.
+
+\subsection{Measuring Rate and RTT}
+The rate of acknowledgements is measured by maintaining a queue filled with the receive times
+of the acknowledgements. Every new acknowledgement w=is pushed onto this queue. In
+addition, whenever the window size is queried, all acknowledgements older than $150$ milliseconds
+are popped from the queue, and the size of the queue, divided by $0.15$, gives the rate of acknowledgements
+over the last $150$ milliseconds.
+
+The minimum round-trip time was measured simply by subtracting the send time from the time the
+acknowledgement was received for every acknowledgement, and keeping track of the minimum value
+that of this figure that was observed.
+
+\subsection{Parameter Choices}
+The main parameters we tried to change were the scaling factor $2$ and the additive constant $1$.
+We tried finding the values of these parameters, rounded to the nearest $0.1$, that give the best score.
+In general, decreasing either of these parameters decreases both the throughput and the delay, so these
+parameters can be varied depending on the implementation needs.
+
+Changing these factors to $1.5$ and $0.5$ respectively produced the best score on the Verizon $140$
+second trace, with a delay of $126$, a throughput of $4.07$, and a score of $-3.43$. Changing either of these parameters up or down by $0.1$ decreased the score. Notice that this score is actually better
+than the score of $-3.65$ produced by the final submission. Also notice that both the delay and
+throughput are lower using these parameters.
+
+The reason we did not use these parameters is that they performed significantly worse on the AT\&T trace,
+giving a score of about $-4.8$. This is most likely due to over fitting as a result of the extensive parameter
+tuning on the Verizon data. To counter this, we selected the parameters $2$ and $1$, which worked
+reasonably well on both datasets and have the advantage of being simple round numbers.
+
+One final thing to note is that our traces always had a roughly $1$ second delay at the beginning.
+Since the first two seconds will not count in the final contest, we expect our protocol to produce
+a better score in the contest than in our tests.
 
 \end{document}
